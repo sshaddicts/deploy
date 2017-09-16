@@ -1,0 +1,11 @@
+version: '2'
+
+services:
+  neuralswarm:
+    image: sshaddicts/neuralswarm:latest
+  crossbar:
+    image: sshaddicts/crossbar-for-neuralswarm:latest
+    ports:
+      - "7778:7778"
+  mongo:
+      image: mongo
