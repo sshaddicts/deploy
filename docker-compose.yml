@@ -9,20 +9,10 @@ services:
     image: sshaddicts/crossbar-for-neuralswarm:latest
     ports:
       - "7778:7778"
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://127.0.0.1:12201"
-        tag: crossbar
   mongo:
       image: "mongo:3"
       volumes:
         - ./mongo:/data/db
-      logging:
-        driver: gelf
-        options:
-          gelf-address: "udp://127.0.0.1:12201"
-          tag: mongo
   elasticsearch:
     image: "elasticsearch:2"
     command: "elasticsearch -Des.cluster.name='graylog'"
@@ -31,11 +21,6 @@ services:
       ES_MAX_MEM: '256m'
     volumes:
       - ./elasticsearch:/usr/share/elasticsearch/data
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://127.0.0.1:12201"
-        tag: elastic
 
   graylog:
     image: graylog2/server:2.3.1-1
@@ -84,12 +69,7 @@ services:
     depends_on:
       - curl.graylog.conf
       - curl.log4j2.xml
-
-    logging:
-      driver: gelf
-      options:
-        gelf-address: "udp://127.0.0.1:12201"
-        tag: graylog
+      
   # Downloads graylog.conf which does not exists by default
   curl.graylog.conf:
     image: appropriate/curl
