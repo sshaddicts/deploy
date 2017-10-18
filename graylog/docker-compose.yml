@@ -3,21 +3,74 @@ version: '2'
 services:
     mongo:
       image: "mongo:3"
-      restart: always
+      volumes:
+        - ./mongo:/data/db
     elasticsearch:
-      image: "elasticsearch:2"
-      command: "elasticsearch -Des.cluster.name='graylog'"
-      restart: always
+    image: "elasticsearch:2"
+    command: "elasticsearch -Des.cluster.name='graylog'"
+    environment:
+      ES_MIN_MEM: '256m'
+      ES_MAX_MEM: '256m'
+    volumes:
+      - ./elasticsearch:/usr/share/elasticsearch/data
+
     graylog:
-      image: graylog2/server:2.2.1-1
-      restart: always
-      environment:
-        GRAYLOG_PASSWORD_SECRET: somepasswordpepper
-        GRAYLOG_ROOT_PASSWORD_SHA2: d66589d11e2436fdfe9d5bc3994436c0efe8641b1c932f579dc682d9b003e657
-        GRAYLOG_WEB_ENDPOINT_URI: http://127.0.0.1:9000/api
-      depends_on:
-        - mongo
-        - elasticsearch
-      ports:
-        - "9000:9000"
-        - "12201:12201/udp"
+    image: graylog2/server:2.3.1-1
+    environment:
+      # Every configuration option can be set via environment variables. Simply prefix the parameter name with GRAYLOG_ and put it all in upper case.
+      #
+      # Change to your value
+      GRAYLOG_PASSWORD_SECRET: 'saltandpeppersecret'
+      # admin:admin by default, generate your password > echo -n yourpassword | shasum -a 256
+      GRAYLOG_ROOT_PASSWORD_SHA2: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'
+      # Public external URI on host, change to yours
+      GRAYLOG_WEB_ENDPOINT_URI: 'http://127.0.0.1:9001/api'
+      GRAYLOG_ROOT_TIMEZONE: 'Europe/Kiev'
+      GRAYLOG_ELASTICSEARCH_HOSTS: 'http://elasticsearch:9200'
+      DISABLE_TELEMETRY: '1'
+      # Define your limits to indexes (30 days here)
+      GRAYLOG_ROTATION_STRATEGY: 'time'
+      GRAYLOG_ELASTICSEARCH_MAX_TIME_PER_INDEX: '1d'
+      GRAYLOG_MAX_NUMBER_OF_INDICES: '30'
+      # Fine tune memory usage
+      GRAYLOG_SERVER_JAVA_OPTS: '-Xms512m -Xmx512m -XX:NewRatio=1 -XX:MaxMetaspaceSize=128m -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:-OmitStackTraceInFastThrow'
+      # Set according to your E-mail settings
+      # GRAYLOG_TRANSPORT_EMAIL_ENABLED: 'false'
+      # GRAYLOG_TRANSPORT_EMAIL_HOSTNAME: 'mail.host.com'
+      # GRAYLOG_TRANSPORT_EMAIL_PORT: '587'
+      # GRAYLOG_TRANSPORT_EMAIL_USE_AUTH: 'true'
+      # GRAYLOG_TRANSPORT_EMAIL_USE_TLS: 'true'
+      # GRAYLOG_TRANSPORT_EMAIL_USE_SSL: 'true'
+      # GRAYLOG_TRANSPORT_EMAIL_AUTH_USERNAME: 'my@email.com'
+      # GRAYLOG_TRANSPORT_EMAIL_AUTH_PASSWORD: '123'
+      # GRAYLOG_TRANSPORT_EMAIL_SUBJECT_PREFIX: '[graylog]'
+      # GRAYLOG_TRANSPORT_EMAIL_FROM_EMAIL: 'graylog@org.com'
+      # GRAYLOG_TRANSPORT_EMAIL_WEB_INTERFACE_URL: 'http://graylog/'
+      # Configure SSL for web interface
+      # GRAYLOG_WEB_TLS_CERT_FILE: /usr/share/graylog/data/config/server.crt
+      # GRAYLOG_WEB_TLS_KEY_FILE: /usr/share/graylog/data/config/server.key
+    volumes:
+      - ./journal:/usr/share/graylog/data/journal
+      - ./config:/usr/share/graylog/data/config
+    links:
+      - mongo:mongo
+      - elasticsearch:elasticsearch
+    ports:
+      - "9001:9000"
+      - "12201:12201/udp"
+    depends_on:
+      - curl.graylog.conf
+      - curl.log4j2.xml
+
+    # Downloads graylog.conf which does not exists by default
+    curl.graylog.conf:
+    image: appropriate/curl
+    command: "curl -s -o /config/graylog.conf https://raw.githubusercontent.com/Graylog2/graylog2-images/2.3/docker/config/graylog.conf"
+    volumes:
+      - ./config:/config
+    # Downloads log4j2.xml which does not exists by default
+    curl.log4j2.xml:
+    image: appropriate/curl
+    command: "curl -s -o /config/log4j2.xml https://raw.githubusercontent.com/Graylog2/graylog2-images/2.3/docker/config/log4j2.xml"
+    volumes:
+      - ./config:/config
